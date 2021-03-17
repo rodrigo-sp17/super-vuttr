@@ -3,6 +3,8 @@ package com.bossabox.supervuttr.controller;
 import com.bossabox.supervuttr.controller.dtos.ToolDTO;
 import com.bossabox.supervuttr.data.Tool;
 import com.bossabox.supervuttr.service.ToolService;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.beans.BeanUtils;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.hateoas.CollectionModel;
@@ -26,6 +28,8 @@ import static org.springframework.hateoas.server.mvc.WebMvcLinkBuilder.methodOn;
 @RestController
 @RequestMapping("/api/tools")
 public class ToolController {
+
+    public final static Logger log = LoggerFactory.getLogger(ToolController.class.getSimpleName());
 
     private final Link ALL_TOOLS_LINK = linkTo(methodOn(ToolController.class)
                 .getAllTools())
@@ -74,6 +78,7 @@ public class ToolController {
         }
 
         var savedTool = toolService.saveTool(tool);
+        log.info("Tool created");
 
         return toolToDto(savedTool);
     }
@@ -82,6 +87,8 @@ public class ToolController {
     @ResponseStatus(code = HttpStatus.NO_CONTENT)
     public RepresentationModel<?> deleteTool(@PathVariable String id) {
         toolService.deleteTool(id);
+        log.info("Tool deleted");
+
         return RepresentationModel.of(Collections.emptyList()).add(ALL_TOOLS_LINK);
     }
 
@@ -99,10 +106,9 @@ public class ToolController {
         BeanUtils.copyProperties(tool, dto);
         dto.setLink(tool.getLink().toString());
 
-        return dto.add(linkTo(
-                methodOn(ToolController.class)
-                        .getToolById(dto.getId()))
-                .withSelfRel());
+        return dto.add(
+                linkTo(methodOn(ToolController.class).getToolById(dto.getId())).withSelfRel(),
+                linkTo(methodOn(ToolController.class).deleteTool(dto.getId())).withRel("delete"));
     }
 
     private Tool dtoToTool(ToolDTO dto) throws URISyntaxException {
