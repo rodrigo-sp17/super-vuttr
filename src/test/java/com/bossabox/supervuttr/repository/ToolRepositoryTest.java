@@ -41,6 +41,7 @@ public class ToolRepositoryTest {
         tool2.put("tags", Arrays.asList("tag1", "tag3"));
 
         var tool3 = new Document();
+        tool3.put("_id", "threeid");
         tool3.put("description", "And another description");
         tool3.put("link", "http://example3.com");
         tool3.put("title", "Tool3 Title");
@@ -91,6 +92,8 @@ public class ToolRepositoryTest {
                 .map(Tool::getTitle)
                 .collect(Collectors.toList());
 
+        System.out.println(titles);
+
         assertTrue(titles.contains("Tool1 Title"));
         assertTrue(titles.contains("Tool2 Title"));
     }
@@ -112,14 +115,12 @@ public class ToolRepositoryTest {
 
     @Test
     public void test_deleteTool() {
-        var tool = toolRepository.findAll().get(0);
-
-        var returnedTool = toolRepository.findById(tool.getId());
+        var returnedTool = toolRepository.findById("threeid");
         assertTrue(returnedTool.isPresent());
 
-        toolRepository.delete(tool);
+        toolRepository.delete(returnedTool.get());
 
-        var result = toolRepository.findById(tool.getId());
+        var result = toolRepository.findById("threeid");
         assertTrue(result.isEmpty());
     }
 }

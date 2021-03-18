@@ -1,21 +1,31 @@
 package com.bossabox.supervuttr;
 
 import com.bossabox.supervuttr.controller.dtos.ToolDTO;
+import com.bossabox.supervuttr.controller.dtos.UserDTO;
+import com.bossabox.supervuttr.security.SecurityConfig;
 import com.mongodb.client.MongoClient;
 import org.bson.Document;
+import org.json.JSONObject;
 import org.junit.jupiter.api.AfterAll;
 import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.autoconfigure.EnableAutoConfiguration;
+import org.springframework.boot.autoconfigure.security.servlet.SecurityAutoConfiguration;
 import org.springframework.boot.test.autoconfigure.json.AutoConfigureJsonTesters;
+import org.springframework.boot.test.autoconfigure.web.servlet.AutoConfigureMockMvc;
+import org.springframework.boot.test.autoconfigure.web.servlet.WebMvcTest;
 import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.boot.test.json.JacksonTester;
 import org.springframework.boot.test.web.client.TestRestTemplate;
 import org.springframework.boot.web.server.LocalServerPort;
-import org.springframework.http.HttpEntity;
-import org.springframework.http.HttpHeaders;
-import org.springframework.http.MediaType;
+import org.springframework.context.annotation.Import;
+import org.springframework.http.*;
+import org.springframework.security.crypto.password.PasswordEncoder;
+import org.springframework.security.test.context.support.WithMockUser;
+import org.springframework.security.test.context.support.WithSecurityContext;
+import org.springframework.test.context.ActiveProfiles;
+import org.springframework.test.context.ContextConfiguration;
 import org.springframework.test.web.servlet.MockMvc;
 
 import java.io.IOException;
@@ -23,20 +33,37 @@ import java.net.URI;
 import java.util.Arrays;
 import java.util.Set;
 
+import static org.hamcrest.CoreMatchers.not;
+import static org.hamcrest.Matchers.containsString;
 import static org.junit.jupiter.api.Assertions.*;
+import static org.mockito.ArgumentMatchers.contains;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.*;
+import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.content;
+import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
 @SpringBootTest(webEnvironment = SpringBootTest.WebEnvironment.RANDOM_PORT)
+@AutoConfigureMockMvc
 @AutoConfigureJsonTesters
 public class SuperVuttrApplicationTests {
 
 	private static final String URI = "http://localhost:";
-	private static final String API = "/api/tools";
+	private static final String API_TOOLS = "/api/tools";
+	private static final String API_USER = "/api/user";
 
 	@LocalServerPort
 	private int port;
 
 	@Autowired
-	private JacksonTester<ToolDTO> dtoJson;
+	private MockMvc mockMvc;
+
+	@Autowired
+	private PasswordEncoder encoder;
+
+	@Autowired
+	private JacksonTester<ToolDTO> toolDtoJson;
+
+	@Autowired
+	private JacksonTester<UserDTO> userDtoJson;
 
 	@Autowired
 	private TestRestTemplate restTemplate;
@@ -72,6 +99,7 @@ public class SuperVuttrApplicationTests {
 		client.getDatabase("vuttr-test")
 				.getCollection("tools")
 				.drop();
+		client.getDatabase("vuttr-test").getCollection("users").drop();
 	}
 
 	@Test
@@ -80,35 +108,38 @@ public class SuperVuttrApplicationTests {
 
 
 	@Test
+	@WithMockUser("someuser")
 	public void test_getAllTools() throws Exception {
-		var uri = URI + port + API;
-		var body = restTemplate.getForEntity(uri, String.class).getBody();
-
-		assertTrue(body.contains("Tool1 Title"));
-		assertTrue(body.contains("Tool2 Title"));
-		assertTrue(body.contains("tag1"));
-		assertTrue(body.contains("http://example2.com"));
+		var uri = URI + port + API_TOOLS;
+		mockMvc.perform(get(new URI(uri)))
+				.andExpect(status().isOk())
+				.andExpect(content().string(containsString("Tool1 Title")))
+				.andExpect(content().string(containsString("Tool2 Title")))
+				.andExpect(content().string(containsString("tag1")))
+				.andExpect(content().string(containsString("http://example2.com")));
 	}
 
 	@Test
-	public void test_getToolByTag() {
-		var uri = URI + port + API + "?tag=tag1";
-		var body = restTemplate.getForEntity(uri, String.class).getBody();
+	@WithMockUser("johnDoe")
+	public void test_getToolByTag() throws Exception {
+		var uri = URI + port + API_TOOLS + "?tag=tag1";
+		mockMvc.perform(get(new URI(uri)))
+				.andExpect(status().isOk())
+				.andExpect(content().string(containsString("Tool1 Title")))
+				.andExpect(content().string(containsString("Tool2 Title")))
+				.andExpect(content().string(not(containsString("Tool3 Title"))));
 
-		assertTrue(body.contains("Tool1 Title"));
-		assertTrue(body.contains("Tool2 Title"));
-		assertFalse(body.contains("Tool3 Title"));
-
-		var uri2 = URI + port + API + "?tag=tag3";
-		var body2 = restTemplate.getForEntity(uri2, String.class).getBody();
-
-		assertFalse(body2.contains("Tool1 Title"));
-		assertTrue(body2.contains("Tool2 Title"));
-		assertFalse(body2.contains("Tool3 Title"));
+		var uri2 = URI + port + API_TOOLS + "?tag=tag3";
+		mockMvc.perform(get(new URI(uri2)))
+				.andExpect(status().isOk())
+				.andExpect(content().string(containsString("Tool2 Title")))
+				.andExpect(content().string(not(containsString("Tool1 Title"))))
+				.andExpect(content().string(not(containsString("Tool3 Title"))));
 	}
 
 	@Test
-	public void test_createDeleteTools() throws IOException {
+	@WithMockUser("johnDoe")
+	public void test_createDeleteTools() throws Exception {
 		var dto = new ToolDTO(
 				"1",
 				"New title",
@@ -117,18 +148,15 @@ public class SuperVuttrApplicationTests {
 				Set.of("TAG6", "TAG7")
 		);
 
-		var uri = URI + port + API;
-		var headers = new HttpHeaders();
-		headers.setContentType(MediaType.APPLICATION_JSON);
-		var entity = new HttpEntity<String>(
-				dtoJson.write(dto).getJson(),
-				headers);
-		var body = restTemplate.postForEntity(
-				uri,
-				entity,
-				String.class)
-				.getBody();
-		var responseDto = dtoJson.parseObject(body);
+		var uri = URI + port + API_TOOLS;
+
+		var body = mockMvc.perform(post(new URI(uri))
+				.contentType(MediaType.APPLICATION_JSON)
+				.content(toolDtoJson.write(dto).getJson()))
+				.andExpect(status().isCreated())
+				.andReturn().getResponse().getContentAsString();
+
+		var responseDto = toolDtoJson.parseObject(body);
 
 		assertEquals(dto.getTitle(), responseDto.getTitle());
 		assertEquals(dto.getDescription(), responseDto.getDescription());
@@ -136,20 +164,156 @@ public class SuperVuttrApplicationTests {
 		assertNotNull(responseDto.getId());
 		assertNotEquals("1", responseDto.getId());
 
-		var uri2 = URI + port + API + "?id=" + responseDto.getId();
-		var body2 = restTemplate.getForEntity(uri2, String.class).getBody();
+		var uri2 = URI + port + API_TOOLS + "?id=" + responseDto.getId();
+		var body2 = mockMvc.perform(post(new URI(uri2))
+				.contentType(MediaType.APPLICATION_JSON)
+				.content(toolDtoJson.write(dto).getJson()))
+				.andExpect(status().isCreated())
+				.andReturn().getResponse().getContentAsString();
 
-		var foundDto = dtoJson.parseObject(body2);
+		var foundDto = toolDtoJson.parseObject(body2);
 		assertEquals(dto.getTitle(), foundDto.getTitle());
 		assertEquals(dto.getDescription(), foundDto.getDescription());
 		assertTrue(foundDto.getTags().contains("tag6"));
 
-		var uri3 = URI + port + API + "/" + responseDto.getId();
-		restTemplate.delete(uri3);
+		var uri3 = URI + port + API_TOOLS + "/" + responseDto.getId();
+		mockMvc.perform(delete(new URI(uri3)))
+				.andExpect(status().isNoContent())
+				.andExpect(content().string(not(containsString("New title"))))
+				.andExpect(content().string(not(containsString("New description"))));
 
-		var body3 = restTemplate.getForEntity(uri2, String.class).getBody();
-		assertFalse(body3.contains("New title"));
-		assertFalse(body3.contains("New description"));
+	}
+
+	@Test
+	public void test_createUser() throws Exception {
+		// Checks for forbidden access
+		var getUri = URI + port + API_TOOLS;
+		assertEquals(HttpStatus.FORBIDDEN,
+				restTemplate.getForEntity(getUri, String.class)
+						.getStatusCode());
+
+		var dto = new UserDTO("", "other_user",
+				"password", "password");
+		var createJson = new JSONObject();
+		createJson.put("id", dto.getId());
+		createJson.put("username", dto.getUsername());
+		createJson.put("password", dto.getPassword());
+		createJson.put("confirmPassword", dto.getConfirmPassword());
+
+		// Checks for wrong login
+		var login = new JSONObject();
+		login.put("username", dto.getUsername());
+		login.put("password", dto.getPassword());
+
+		var uri = URI + port + "/login";
+		assertNull(restTemplate.postForEntity(uri,
+				login.toString(),
+				String.class).getHeaders().get("Authorization"));
+
+		// Creates user
+		var uri2 = URI + port + API_USER;
+		var headers = new HttpHeaders();
+		headers.setContentType(MediaType.APPLICATION_JSON);
+		var entity = new HttpEntity<String>(
+				createJson.toString(),
+				headers);
+		var body =
+				restTemplate.postForEntity(uri2, entity, String.class).getBody();
+		assertTrue(body.contains(dto.getUsername()));
+		assertTrue(body.contains("id"));
+		assertFalse(body.contains("password"));
+		assertFalse(body.contains("confirmPassword"));
+
+		// Logins again
+		var token = restTemplate.postForEntity(
+				uri,
+				login.toString(),
+				String.class).getHeaders().get("Authorization").get(0);
+
+		assertNotEquals("", token);
+		assertTrue(token.startsWith("Bearer "));
+
+		// Attempts to access resource, now logged in
+		headers = new HttpHeaders();
+		headers.setBearerAuth(token);
+		assertEquals(HttpStatus.OK,
+				restTemplate.exchange(
+						getUri,
+						HttpMethod.GET,
+						new HttpEntity<>(headers),
+						String.class).getStatusCode());
+	}
+
+	@Test
+	public void test_deleteUser() throws Exception {
+		var dto = new UserDTO("", "john_doe",
+				"password", "password");
+
+		var createJson = new JSONObject();
+		createJson.put("id", dto.getId());
+		createJson.put("username", dto.getUsername());
+		createJson.put("password", dto.getPassword());
+		createJson.put("confirmPassword", dto.getConfirmPassword());
+
+		var uri = URI + port + API_USER;
+		var headers = new HttpHeaders();
+		headers.setContentType(MediaType.APPLICATION_JSON);
+		var entity = new HttpEntity<String>(
+				createJson.toString(),
+				headers);
+		restTemplate.postForEntity(uri, entity, String.class);
+
+		var login = new JSONObject();
+		login.put("username", dto.getUsername());
+		login.put("password", dto.getPassword());
+		var loginUri = URI + port + "/login";
+		var token = restTemplate.postForEntity(
+				loginUri,
+				login.toString(),
+				String.class).getHeaders().get("Authorization").get(0);
+
+		var authHeader = new HttpHeaders();
+		authHeader.setBearerAuth(token);
+		var deleteUri = URI + port + API_USER + "/anyuser";
+		var code = restTemplate.exchange(deleteUri,
+				HttpMethod.DELETE,
+				new HttpEntity<>(authHeader),
+				String.class
+		).getStatusCode();
+
+		assertEquals(HttpStatus.FORBIDDEN, code);
+
+		deleteUri = URI + port + API_USER + "/" + dto.getUsername();
+		code = restTemplate.exchange(deleteUri,
+				HttpMethod.DELETE,
+				new HttpEntity<>(authHeader),
+				String.class
+		).getStatusCode();
+
+		assertEquals(HttpStatus.NO_CONTENT, code);
+	}
+
+	@Test
+	public void test_unauthorizedAccess() throws Exception {
+		var uri = URI + port + API_TOOLS;
+		assertEquals(HttpStatus.FORBIDDEN,
+				restTemplate.getForEntity(uri, String.class)
+						.getStatusCode());
+
+		assertEquals(HttpStatus.FORBIDDEN,
+				restTemplate.postForEntity(uri,
+						"anything",
+						String.class)
+						.getStatusCode());
+
+		var uri2 = URI + port + API_TOOLS + "?tag=tag1";
+		assertEquals(HttpStatus.FORBIDDEN,
+				restTemplate.getForEntity(uri2, String.class)
+						.getStatusCode());
+
+		var uri3 = URI + port + API_TOOLS + "/" + "anyid";
+		mockMvc.perform(delete(new URI(uri3)))
+				.andExpect(status().isForbidden());
 	}
 
 }

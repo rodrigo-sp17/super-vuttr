@@ -2,6 +2,7 @@ package com.bossabox.supervuttr.controller;
 
 import com.bossabox.supervuttr.controller.dtos.ToolDTO;
 import com.bossabox.supervuttr.data.Tool;
+import com.bossabox.supervuttr.security.UserDetailsServiceImpl;
 import com.bossabox.supervuttr.service.ToolService;
 import org.json.JSONArray;
 import org.json.JSONObject;
@@ -13,6 +14,7 @@ import org.springframework.boot.test.autoconfigure.web.servlet.WebMvcTest;
 import org.springframework.boot.test.json.JacksonTester;
 import org.springframework.boot.test.mock.mockito.MockBean;
 import org.springframework.http.MediaType;
+import org.springframework.security.test.context.support.WithMockUser;
 import org.springframework.test.web.servlet.MockMvc;
 
 import java.net.URI;
@@ -25,8 +27,8 @@ import static org.mockito.Mockito.*;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.*;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
-@WebMvcTest(controllers = ToolController.class,
-        excludeAutoConfiguration = SecurityAutoConfiguration.class)
+@WebMvcTest(controllers = ToolController.class)
+@WithMockUser("johndoe")
 @AutoConfigureJsonTesters
 public class ToolControllerTest {
 
@@ -38,6 +40,9 @@ public class ToolControllerTest {
 
     @MockBean
     private ToolService toolService;
+
+    @MockBean
+    private UserDetailsServiceImpl userDetailsService;
 
     @Autowired
     private JacksonTester<ToolDTO> dtoJson;
