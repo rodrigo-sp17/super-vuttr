@@ -77,6 +77,9 @@ public class ToolController {
                     "Not a valid URL link");
         }
 
+        // Ensures the id is null, so a new document is created
+        tool.setId(null);
+
         var savedTool = toolService.saveTool(tool);
         log.info("Tool created");
 
