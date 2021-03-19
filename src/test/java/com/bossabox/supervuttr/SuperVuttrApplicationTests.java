@@ -24,6 +24,7 @@ import org.springframework.http.*;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.security.test.context.support.WithMockUser;
 import org.springframework.security.test.context.support.WithSecurityContext;
+import org.springframework.security.test.context.support.WithUserDetails;
 import org.springframework.test.context.ActiveProfiles;
 import org.springframework.test.context.ContextConfiguration;
 import org.springframework.test.web.servlet.MockMvc;
@@ -72,26 +73,54 @@ public class SuperVuttrApplicationTests {
 	@BeforeAll
 	public static void setup(@Autowired MongoClient client) throws Exception {
 		var tool1 = new Document();
+		tool1.put("ownerId", "randomId");
 		tool1.put("description", "Some description");
 		tool1.put("link", "http://example.com");
 		tool1.put("title", "Tool1 Title");
 		tool1.put("tags", Arrays.asList("tag1", "tag2"));
 
 		var tool2 = new Document();
+		tool2.put("ownerId", "randomId");
 		tool2.put("description", "Another description");
 		tool2.put("link", "http://example2.com");
 		tool2.put("title", "Tool2 Title");
 		tool2.put("tags", Arrays.asList("tag1", "tag3"));
 
 		var tool3 = new Document();
+		tool3.put("_id", "tool3id");
+		tool3.put("ownerId", "randomId");
 		tool3.put("description", "And another description");
 		tool3.put("link", "http://example3.com");
 		tool3.put("title", "Tool3 Title");
 		tool3.put("tags", Arrays.asList("tag4", "tag5"));
 
+		var tool4 = new Document();
+		tool4.put("_id", "tool4id");
+		tool4.put("ownerId", "notExpectedId");
+		tool4.put("description", "And....");
+		tool4.put("link", "http://example4.com");
+		tool4.put("title", "Tool4 Title");
+		tool4.put("tags", Arrays.asList("tag11", "tag12"));
+
+		var tool5 = new Document();
+		tool5.put("_id", "tool5id");
+		tool5.put("ownerId", "randomId");
+		tool5.put("description", "And....");
+		tool5.put("link", "http://example4.com");
+		tool5.put("title", "Tool5 Title");
+		tool5.put("tags", Arrays.asList("tag11", "tag12"));
+
 		client.getDatabase("vuttr-test")
 				.getCollection("tools")
-				.insertMany(Arrays.asList(tool1, tool2, tool3));
+				.insertMany(Arrays.asList(tool1, tool2, tool3, tool4, tool5));
+
+		var owner = new Document();
+		owner.put("_id", "randomId");
+		owner.put("username", "the_other_one");
+		owner.put("password", "aHashedPassword");
+
+		client.getDatabase("vuttr-test")
+				.getCollection("users").insertOne(owner);
 	}
 
 	@AfterAll
@@ -108,7 +137,7 @@ public class SuperVuttrApplicationTests {
 
 
 	@Test
-	@WithMockUser("someuser")
+	@WithUserDetails("the_other_one")
 	public void test_getAllTools() throws Exception {
 		var uri = URI + port + API_TOOLS;
 		mockMvc.perform(get(new URI(uri)))
@@ -116,11 +145,12 @@ public class SuperVuttrApplicationTests {
 				.andExpect(content().string(containsString("Tool1 Title")))
 				.andExpect(content().string(containsString("Tool2 Title")))
 				.andExpect(content().string(containsString("tag1")))
-				.andExpect(content().string(containsString("http://example2.com")));
+				.andExpect(content().string(containsString("http://example2.com")))
+				.andExpect(content().string(not(containsString("Tool4 Title"))));
 	}
 
 	@Test
-	@WithMockUser("johnDoe")
+	@WithUserDetails("the_other_one")
 	public void test_getToolByTag() throws Exception {
 		var uri = URI + port + API_TOOLS + "?tag=tag1";
 		mockMvc.perform(get(new URI(uri)))
@@ -138,7 +168,7 @@ public class SuperVuttrApplicationTests {
 	}
 
 	@Test
-	@WithMockUser("johnDoe")
+	@WithUserDetails("the_other_one")
 	public void test_createDeleteTools() throws Exception {
 		var dto = new ToolDTO(
 				"1",
@@ -164,6 +194,7 @@ public class SuperVuttrApplicationTests {
 		assertNotNull(responseDto.getId());
 		assertNotEquals("1", responseDto.getId());
 
+		// Fetches the added tool
 		var uri2 = URI + port + API_TOOLS + "?id=" + responseDto.getId();
 		var body2 = mockMvc.perform(post(new URI(uri2))
 				.contentType(MediaType.APPLICATION_JSON)
@@ -182,6 +213,16 @@ public class SuperVuttrApplicationTests {
 				.andExpect(content().string(not(containsString("New title"))))
 				.andExpect(content().string(not(containsString("New description"))));
 
+	}
+
+	@Test
+	@WithUserDetails("the_other_one")
+	public void test_noUnauthorizedDeletion() throws Exception {
+		var uri = URI + port + API_TOOLS + "/" + "tool4id";
+		mockMvc.perform(delete(new URI(uri))).andExpect(status().isNotFound());
+
+		var uri2 = URI + port + API_TOOLS + "/" + "tool5id";
+		mockMvc.perform(delete(new URI(uri2))).andExpect(status().isNoContent());
 	}
 
 	@Test

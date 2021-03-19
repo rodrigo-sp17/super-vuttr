@@ -29,18 +29,21 @@ public class ToolRepositoryTest {
     @BeforeAll
     public static void setup(@Autowired MongoClient client) throws Exception {
         var tool1 = new Document();
+        tool1.put("ownerId", "owner");
         tool1.put("description", "Some description");
         tool1.put("link", "http://example.com");
         tool1.put("title", "Tool1 Title");
         tool1.put("tags", Arrays.asList("tag1", "tag2"));
 
         var tool2 = new Document();
+        tool2.put("ownerId", "owner");
         tool2.put("description", "Another description");
         tool2.put("link", "http://example2.com");
         tool2.put("title", "Tool2 Title");
         tool2.put("tags", Arrays.asList("tag1", "tag3"));
 
         var tool3 = new Document();
+        tool3.put("ownerId", "owner");
         tool3.put("_id", "threeid");
         tool3.put("description", "And another description");
         tool3.put("link", "http://example3.com");
@@ -85,7 +88,7 @@ public class ToolRepositoryTest {
 
     @Test
     public void test_findAllTools() {
-        var tools = toolRepository.findAll();
+        var tools = toolRepository.findByOwnerId("owner");
         assertTrue(tools.size() >= 2);
 
         var titles = tools.stream()
@@ -103,8 +106,8 @@ public class ToolRepositoryTest {
         var wrongTags = Arrays.asList("tag1", "tag6");
         var rightTags = Arrays.asList("tag3", "tag1");
 
-        var noTools = toolRepository.findToolsWithTags(wrongTags);
-        var tools = toolRepository.findToolsWithTags(rightTags);
+        var noTools = toolRepository.findToolsWithTags(wrongTags, "owner");
+        var tools = toolRepository.findToolsWithTags(rightTags, "owner");
 
         assertTrue(noTools.isEmpty());
         assertEquals(1, tools.size());
@@ -115,7 +118,8 @@ public class ToolRepositoryTest {
 
     @Test
     public void test_deleteTool() {
-        var returnedTool = toolRepository.findById("threeid");
+        var returnedTool = toolRepository.findByIdAndOwnerId("threeid",
+                "owner");
         assertTrue(returnedTool.isPresent());
 
         toolRepository.delete(returnedTool.get());

@@ -17,5 +17,5 @@ public class Tool {
     private URI link;
     private String description;
     private Set<String> tags;
-
+    private String ownerId;
 }

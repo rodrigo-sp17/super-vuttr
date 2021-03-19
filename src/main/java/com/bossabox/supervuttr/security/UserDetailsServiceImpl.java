@@ -22,10 +22,11 @@ public class UserDetailsServiceImpl implements UserDetailsService {
     public UserDetails loadUserByUsername(String s) throws UsernameNotFoundException {
         try {
             var user = userService.getUserByUsername(s);
-            return new User(
+            return new UserPrincipal(
                     user.getUsername(),
                     user.getPassword(),
-                    Collections.emptyList()
+                    Collections.emptyList(),
+                    user.getId()
             );
         } catch (UserNotFoundException e) {
             throw new UsernameNotFoundException(e.getMessage());

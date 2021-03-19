@@ -46,12 +46,21 @@ public class AuthorizationFilter extends BasicAuthenticationFilter {
     private UsernamePasswordAuthenticationToken parseToken(String header) {
         var stringToken = header.replace("Bearer ", "");
 
-        var username = JWT.require(Algorithm.HMAC512(jwtSecret)).build()
-                .verify(stringToken)
-                .getSubject();
+        var decodedJWT = JWT.require(Algorithm.HMAC512(jwtSecret)).build()
+                .verify(stringToken);
 
-        return username == null ? null : new UsernamePasswordAuthenticationToken(
-                username,
+        var username = decodedJWT.getSubject();
+        var userId = decodedJWT.getClaim("userid").asString();
+
+        if (userId == null || username == null) {
+            return null;
+        }
+
+        UserPrincipal userPrincipal = new UserPrincipal(username,
+                "", Collections.emptyList(), userId);
+
+        return new UsernamePasswordAuthenticationToken(
+                userPrincipal,
                 null,
                 Collections.emptyList()
         );

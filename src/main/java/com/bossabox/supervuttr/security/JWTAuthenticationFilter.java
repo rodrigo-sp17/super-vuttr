@@ -68,8 +68,11 @@ public class JWTAuthenticationFilter extends UsernamePasswordAuthenticationFilte
                                             FilterChain chain,
                                             Authentication authResult)
             throws IOException, ServletException {
+        var userPrincipal = (UserPrincipal) authResult.getPrincipal();
+
         var jwtToken = JWT.create()
-                .withSubject(authResult.getName())
+                .withSubject(userPrincipal.getUsername())
+                .withClaim("userid", userPrincipal.getId())
                 .withExpiresAt(new Date(System.currentTimeMillis() + jwtExpiration))
                 .sign(Algorithm.HMAC512(jwtSecret.getBytes()));
 

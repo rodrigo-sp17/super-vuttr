@@ -7,10 +7,14 @@ import org.springframework.stereotype.Repository;
 
 import java.util.Collection;
 import java.util.List;
+import java.util.Optional;
 
 @Repository
 public interface ToolRepository extends MongoRepository<Tool, String> {
 
-    @Query("{'tags': { $all : ?0 }}")
-    List<Tool> findToolsWithTags(Collection<String> tags);
+    List<Tool> findByOwnerId(String ownerId);
+    Optional<Tool> findByIdAndOwnerId(String id, String ownerId);
+
+    @Query("{$and: [{'ownerId': ?1}, {'tags': {$all: ?0}}] }")
+    List<Tool> findToolsWithTags(Collection<String> tags, String ownerId);
 }
