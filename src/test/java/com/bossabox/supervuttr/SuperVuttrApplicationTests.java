@@ -224,6 +224,11 @@ public class SuperVuttrApplicationTests {
 		assertFalse(body.contains("password"));
 		assertFalse(body.contains("confirmPassword"));
 
+		mockMvc.perform(post(new URI(uri2))
+						.contentType(MediaType.APPLICATION_JSON)
+						.content(createJson.toString()))
+				.andExpect(status().isConflict());
+
 		// Logins again
 		var token = restTemplate.postForEntity(
 				uri,

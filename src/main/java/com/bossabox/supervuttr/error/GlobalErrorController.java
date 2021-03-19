@@ -34,7 +34,7 @@ public class GlobalErrorController {
 
     @ExceptionHandler(ResponseStatusException.class)
     public ResponseEntity<?> handleResponseStatusException(ResponseStatusException ex) {
-        return ResponseEntity.badRequest().body(ex.getReason());
+        return ResponseEntity.status(ex.getStatus()).body(ex.getReason());
     }
 
     @RequestMapping("/error")
