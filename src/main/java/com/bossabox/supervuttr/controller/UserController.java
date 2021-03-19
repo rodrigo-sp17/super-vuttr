@@ -3,6 +3,7 @@ package com.bossabox.supervuttr.controller;
 import com.bossabox.supervuttr.controller.dtos.UserDTO;
 import com.bossabox.supervuttr.data.AppUser;
 import com.bossabox.supervuttr.service.UserService;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.BeanUtils;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.HttpStatus;
@@ -15,6 +16,7 @@ import org.springframework.web.server.ResponseStatusException;
 import javax.validation.Valid;
 import javax.validation.constraints.NotNull;
 
+@Slf4j
 @RestController
 @RequestMapping("/api/user")
 public class UserController {
@@ -32,6 +34,7 @@ public class UserController {
 
         try {
             var addedUser = userService.createUser(dtoToUser(userDTO));
+            log.info("Created new user: " + addedUser.getUsername());
             return userToDto(addedUser);
         } catch (IllegalArgumentException e) {
             throw new ResponseStatusException(HttpStatus.CONFLICT,
@@ -45,6 +48,7 @@ public class UserController {
                            Authentication auth) {
         if (auth.getName().equals(username)) {
             userService.deleteUser(username);
+            log.info("Deleted user: " + username);
             return;
         } else {
             throw new ResponseStatusException(HttpStatus.FORBIDDEN);

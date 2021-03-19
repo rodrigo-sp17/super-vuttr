@@ -4,6 +4,7 @@ import com.auth0.jwt.JWT;
 import com.auth0.jwt.algorithms.Algorithm;
 import com.bossabox.supervuttr.data.AppUser;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.boot.json.JacksonJsonParser;
@@ -23,6 +24,7 @@ import java.time.Instant;
 import java.time.LocalDateTime;
 import java.util.Date;
 
+@Slf4j
 public class JWTAuthenticationFilter extends UsernamePasswordAuthenticationFilter {
 
     private final AuthenticationManager manager;
@@ -54,6 +56,9 @@ public class JWTAuthenticationFilter extends UsernamePasswordAuthenticationFilte
             return manager.authenticate(token);
         } catch (IOException e) {
             throw new AuthenticationServiceException("Could not read user data from request");
+        } catch (AuthenticationException a) {
+            log.info("Failed authentication: " + a.getMessage());
+            throw a;
         }
     }
 
