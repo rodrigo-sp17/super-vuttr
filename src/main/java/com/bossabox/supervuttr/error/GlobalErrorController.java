@@ -1,5 +1,6 @@
 package com.bossabox.supervuttr.error;
 
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.validation.FieldError;
@@ -12,15 +13,15 @@ import javax.servlet.http.HttpServletRequest;
 import java.util.HashMap;
 import java.util.Map;
 
+@Slf4j
 @ControllerAdvice
 public class GlobalErrorController {
 
     /*
         Original one from: https://www.baeldung.com/spring-boot-bean-validation
      */
-    @ResponseStatus(HttpStatus.BAD_REQUEST)
     @ExceptionHandler(MethodArgumentNotValidException.class)
-    public Map<String, String> handleWrongValidation(MethodArgumentNotValidException e) {
+    public ResponseEntity<Map<String, String>> handleWrongValidation(MethodArgumentNotValidException e) {
         var errors = new HashMap<String, String>();
         e.getBindingResult().getAllErrors().stream()
                 .forEach(error -> {
@@ -28,8 +29,7 @@ public class GlobalErrorController {
                     var errorMsg = error.getDefaultMessage();
                     errors.put(fieldName, errorMsg);
                 });
-
-        return errors;
+        return ResponseEntity.badRequest().body(errors);
     }
 
     @ExceptionHandler(ResponseStatusException.class)
