@@ -7,14 +7,11 @@ import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.BeanUtils;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.HttpStatus;
-import org.springframework.lang.NonNull;
 import org.springframework.security.core.Authentication;
-import org.springframework.validation.BindingResult;
 import org.springframework.web.bind.annotation.*;
 import org.springframework.web.server.ResponseStatusException;
 
 import javax.validation.Valid;
-import javax.validation.constraints.NotNull;
 
 @Slf4j
 @RestController
@@ -49,7 +46,6 @@ public class UserController {
         if (auth.getName().equals(username)) {
             userService.deleteUser(username);
             log.info("Deleted user: " + username);
-            return;
         } else {
             throw new ResponseStatusException(HttpStatus.FORBIDDEN);
         }

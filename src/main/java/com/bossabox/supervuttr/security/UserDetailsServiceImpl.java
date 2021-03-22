@@ -1,10 +1,8 @@
 package com.bossabox.supervuttr.security;
 
 import com.bossabox.supervuttr.error.UserNotFoundException;
-import com.bossabox.supervuttr.repository.UserRepository;
 import com.bossabox.supervuttr.service.UserService;
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.security.core.userdetails.User;
 import org.springframework.security.core.userdetails.UserDetails;
 import org.springframework.security.core.userdetails.UserDetailsService;
 import org.springframework.security.core.userdetails.UsernameNotFoundException;

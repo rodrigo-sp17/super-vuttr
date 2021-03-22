@@ -3,7 +3,6 @@ package com.bossabox.supervuttr.data;
 import lombok.Data;
 import org.springframework.data.annotation.Id;
 import org.springframework.data.mongodb.core.mapping.Document;
-import org.springframework.hateoas.RepresentationModel;
 
 import java.net.URI;
 import java.util.Set;
