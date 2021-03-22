@@ -5,6 +5,9 @@ import org.springframework.security.core.userdetails.User;
 
 import java.util.Collection;
 
+/**
+ * This class extends the User from Spring Security's user to allow for storage of ID information.
+ */
 public class UserPrincipal extends User {
     private String id;
 
