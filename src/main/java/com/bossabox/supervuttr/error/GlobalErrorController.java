@@ -1,6 +1,8 @@
 package com.bossabox.supervuttr.error;
 
+import io.swagger.v3.oas.annotations.Hidden;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.boot.web.servlet.error.ErrorController;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.validation.FieldError;
@@ -14,8 +16,10 @@ import java.util.HashMap;
 import java.util.Map;
 
 @Slf4j
+@Hidden
 @ControllerAdvice
-public class GlobalErrorController {
+@RestController
+public class GlobalErrorController implements ErrorController {
 
     /*
         Original one from: https://www.baeldung.com/spring-boot-bean-validation
@@ -52,5 +56,10 @@ public class GlobalErrorController {
             }
         }
         return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).build();
+    }
+
+    @Override
+    public String getErrorPath() {
+        return null;
     }
 }

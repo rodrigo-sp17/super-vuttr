@@ -3,6 +3,9 @@ package com.bossabox.supervuttr.controller;
 import com.bossabox.supervuttr.controller.dtos.UserDTO;
 import com.bossabox.supervuttr.data.AppUser;
 import com.bossabox.supervuttr.service.UserService;
+import io.swagger.v3.oas.annotations.Operation;
+import io.swagger.v3.oas.annotations.responses.ApiResponse;
+import io.swagger.v3.oas.annotations.security.SecurityRequirements;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.BeanUtils;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -21,6 +24,11 @@ public class UserController {
     @Autowired
     private UserService userService;
 
+    @Operation(summary = "Signs up a new user", responses = {
+            @ApiResponse(responseCode = "201", description = "User was created"),
+            @ApiResponse(responseCode = "400", description = "Prerequisites are not fulfilled"),
+            @ApiResponse(responseCode = "409", description = "Username already exists")
+    })
     @PostMapping
     @ResponseStatus(HttpStatus.CREATED)
     public UserDTO createUser(@Valid @RequestBody UserDTO userDTO) {
@@ -39,6 +47,11 @@ public class UserController {
         }
     }
 
+    @Operation(summary = "Deletes a user from the database", responses = {
+            @ApiResponse(responseCode = "204", description = "The user was deleted"),
+            @ApiResponse(responseCode = "403", description = "Unauthorized deletion")
+    })
+    @SecurityRequirements
     @DeleteMapping("/{username}")
     @ResponseStatus(HttpStatus.NO_CONTENT)
     public void deleteUser(@PathVariable String username,

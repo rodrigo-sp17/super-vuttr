@@ -60,7 +60,7 @@ public class ToolControllerTest {
             setupBefore = TestExecutionEvent.TEST_EXECUTION)
     public void test_getAllTools() throws Exception {
 
-        mvc.perform(get(new URI("/api/tools")))
+        mvc.perform(get(new URI("/api/tools/all")))
                 .andExpect(status().isOk());
 
         verify(toolService, atLeastOnce()).getAllTools(any());

@@ -128,7 +128,7 @@ public class SuperVuttrApplicationTests {
 	@Test
 	@WithUserDetails("the_other_one")
 	public void test_getAllTools() throws Exception {
-		var uri = URI + port + API_TOOLS;
+		var uri = URI + port + API_TOOLS + "/all";
 		mockMvc.perform(get(new URI(uri)))
 				.andExpect(status().isOk())
 				.andExpect(content().string(containsString("Tool1 Title")))
@@ -184,11 +184,9 @@ public class SuperVuttrApplicationTests {
 		assertNotEquals("1", responseDto.getId());
 
 		// Fetches the added tool
-		var uri2 = URI + port + API_TOOLS + "?id=" + responseDto.getId();
-		var body2 = mockMvc.perform(post(new URI(uri2))
-				.contentType(MediaType.APPLICATION_JSON)
-				.content(toolDtoJson.write(dto).getJson()))
-				.andExpect(status().isCreated())
+		var uri2 = URI + port + API_TOOLS + "/" + responseDto.getId();
+		var body2 = mockMvc.perform(get(new URI(uri2)))
+				.andExpect(status().isOk())
 				.andReturn().getResponse().getContentAsString();
 
 		var foundDto = toolDtoJson.parseObject(body2);
@@ -217,7 +215,7 @@ public class SuperVuttrApplicationTests {
 	@Test
 	public void test_createUser() throws Exception {
 		// Checks for forbidden access
-		var getUri = URI + port + API_TOOLS;
+		var getUri = URI + port + API_TOOLS + "/all";
 		assertEquals(HttpStatus.FORBIDDEN,
 				restTemplate.getForEntity(getUri, String.class)
 						.getStatusCode());
@@ -330,7 +328,7 @@ public class SuperVuttrApplicationTests {
 
 	@Test
 	public void test_unauthorizedAccess() throws Exception {
-		var uri = URI + port + API_TOOLS;
+		var uri = URI + port + API_TOOLS + "/all";
 		assertEquals(HttpStatus.FORBIDDEN,
 				restTemplate.getForEntity(uri, String.class)
 						.getStatusCode());

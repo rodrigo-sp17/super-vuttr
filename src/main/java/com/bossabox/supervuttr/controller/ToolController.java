@@ -4,6 +4,9 @@ import com.bossabox.supervuttr.controller.dtos.ToolDTO;
 import com.bossabox.supervuttr.data.Tool;
 import com.bossabox.supervuttr.security.UserPrincipal;
 import com.bossabox.supervuttr.service.ToolService;
+import io.swagger.v3.oas.annotations.Operation;
+import io.swagger.v3.oas.annotations.responses.ApiResponse;
+import io.swagger.v3.oas.annotations.security.SecurityRequirements;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.BeanUtils;
@@ -27,6 +30,7 @@ import static org.springframework.hateoas.server.mvc.WebMvcLinkBuilder.linkTo;
 import static org.springframework.hateoas.server.mvc.WebMvcLinkBuilder.methodOn;
 
 @RestController
+@SecurityRequirements
 @RequestMapping("/api/tools")
 public class ToolController {
 
@@ -39,8 +43,8 @@ public class ToolController {
     @Autowired
     private ToolService toolService;
 
-
-    @GetMapping
+    @Operation(summary = "Get all tools for user")
+    @GetMapping("/all")
     @ResponseStatus(code = HttpStatus.OK)
     public CollectionModel<ToolDTO> getAllTools(Authentication auth) {
         var userPrincipal = (UserPrincipal) auth.getPrincipal();
@@ -51,15 +55,20 @@ public class ToolController {
         return CollectionModel.of(dtos).add(ALL_TOOLS_LINK.withSelfRel());
     }
 
-    @GetMapping(params = {"id"})
+    @Operation(summary = "Get tools containing the provided id", responses = {
+            @ApiResponse(responseCode = "200", description = "Tool found"),
+            @ApiResponse(responseCode = "404", description = "Tool not found")
+    })
+    @GetMapping("/{id}")
     @ResponseStatus(HttpStatus.OK)
-    public ToolDTO getToolById(@RequestParam String id, Authentication auth) {
+    public ToolDTO getToolById(@PathVariable String id, Authentication auth) {
         var userPrincipal = (UserPrincipal) auth.getPrincipal();
         var tool = toolService.getToolById(id, userPrincipal.getId());
 
         return toolToDto(tool).add(ALL_TOOLS_LINK);
     }
 
+    @Operation(summary = "Get tools containing the provided tag")
     @GetMapping(params = {"tag"})
     @ResponseStatus(code = HttpStatus.OK)
     public CollectionModel<ToolDTO> getToolsByTag(@RequestParam String tag, Authentication auth) {
@@ -70,6 +79,10 @@ public class ToolController {
         return CollectionModel.of(dtos).add(ALL_TOOLS_LINK);
     }
 
+    @Operation(summary = "Creates a new tool for the user", responses = {
+            @ApiResponse(responseCode = "201", description = "Tool was created"),
+            @ApiResponse(responseCode = "400", description = "If the link is not valid")
+    })
     @PostMapping
     @ResponseStatus(code = HttpStatus.CREATED)
     public ToolDTO createTool(@RequestBody ToolDTO toolDTO, Authentication auth) {
@@ -93,6 +106,10 @@ public class ToolController {
         return toolToDto(savedTool);
     }
 
+    @Operation(summary = "Deletes tool from database", responses = {
+            @ApiResponse(responseCode = "204", description = "No content"),
+            @ApiResponse(responseCode = "404", description = "Tool not found")
+    })
     @DeleteMapping("/{id}")
     @ResponseStatus(code = HttpStatus.NO_CONTENT)
     public RepresentationModel<?> deleteTool(@PathVariable String id, Authentication auth) {
